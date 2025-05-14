@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON 部落格渲染器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" />
+    <link rel="stylesheet" href="style.css">
+    <script src="parser.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-700">JSON 內容渲染器</h1>
+            <p class="text-gray-500">將您的 JSON 資料結構貼入下方，即可預覽部落格文章。</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-3 text-gray-700">輸入 JSON 資料</h2>
+                <textarea id="jsonInput" class="w-full h-96 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" placeholder="在此貼上 JSON 資料..."></textarea>
+                <button id="renderButton" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-150 ease-in-out">渲染內容</button>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md md:col-span-1">
+                 <h2 class="text-xl font-semibold mb-3 text-gray-700">渲染結果預覽</h2>
+                <div id="htmlOutput" class="prose max-w-none prose-sm sm:prose-base lg:prose-lg xl:prose-xl focus:outline-none overflow-auto h-96 border border-gray-200 rounded-md p-4"> 
+                    <!-- 渲染後的 HTML 將會顯示在這裡 -->
+                    <p class="text-gray-400">請先輸入 JSON 並點擊渲染按鈕。</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="renderedContentFull" class="bg-white p-6 md:p-8 rounded-lg shadow-md mt-8 hidden">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">完整渲染頁面</h2>
+            <!-- 完整渲染的內容將會顯示在這裡，模擬最終部落格頁面 -->
+        </div>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: false });
+
+        document.getElementById('renderButton').addEventListener('click', async () => {
+            const jsonInput = document.getElementById('jsonInput').value;
+            const outputDiv = document.getElementById('htmlOutput');
+            const fullOutputDiv = document.getElementById('renderedContentFull');
+            outputDiv.innerHTML = ''; // 清空先前的輸出
+            fullOutputDiv.innerHTML = ''; // 清空先前的完整輸出
+
+            try {
+                const jsonObj = JSON.parse(jsonInput);
+                const htmlContent = parseJsonToHtml(jsonObj);
+                outputDiv.innerHTML = htmlContent;
+                fullOutputDiv.innerHTML = htmlContent; // 也顯示在模擬的完整頁面區塊
+                fullOutputDiv.classList.remove('hidden');
+
+                // 初始化 Mermaid
+                // Ensure elements exist before calling mermaid.run
+                const mermaidElementsOutput = outputDiv.querySelectorAll('.mermaid');
+                if (mermaidElementsOutput.length > 0) {
+                    await mermaid.run({
+                        nodes: mermaidElementsOutput,
+                    });
+                }
+                const mermaidElementsFull = fullOutputDiv.querySelectorAll('.mermaid');
+                if (mermaidElementsFull.length > 0) {
+                    await mermaid.run({
+                        nodes: mermaidElementsFull,
+                    });
+                }
+
+                // 初始化 Prism
+                Prism.highlightAllUnder(outputDiv);
+                Prism.highlightAllUnder(fullOutputDiv);
+
+            } catch (error) {
+                console.error('Error parsing or rendering JSON:', error);
+                outputDiv.innerHTML = `<p class="text-red-500">渲染錯誤: ${error.message}</p><p class="text-gray-500">請檢查您的 JSON 格式是否正確。</p>`;
+                fullOutputDiv.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

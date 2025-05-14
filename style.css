@@ -1,0 +1,153 @@
+/* Custom styles for the blog content area */
+#htmlOutput, #renderedContentFull {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.7;
+    color: #374151; /* Tailwind gray-700 */
+}
+
+#htmlOutput h1, #renderedContentFull h1,
+#htmlOutput h2, #renderedContentFull h2,
+#htmlOutput h3, #renderedContentFull h3,
+#htmlOutput h4, #renderedContentFull h4,
+#htmlOutput h5, #renderedContentFull h5,
+#htmlOutput h6, #renderedContentFull h6 {
+    font-family: inherit; /* Use the same sans-serif font family */
+    color: #1f2937; /* Tailwind gray-800 */
+    margin-top: 2em;   /* Increased top margin for better separation */
+    margin-bottom: 0.75em; /* Adjusted bottom margin */
+    line-height: 1.3;
+    font-weight: 600; /* Slightly bolder headings */
+}
+
+#htmlOutput h1, #renderedContentFull h1 {
+    font-size: 2em; /* Adjusted size */
+    font-weight: 700; /* Bolder for H1 */
+    border-bottom: 1px solid #e5e7eb; /* Tailwind gray-200 */
+    padding-bottom: 0.4em;
+}
+#htmlOutput h2, #renderedContentFull h2 {
+    font-size: 1.6em; /* Adjusted size */
+    font-weight: 700;
+    border-bottom: 1px solid #e5e7eb; /* Tailwind gray-200 */
+    padding-bottom: 0.3em;
+}
+#htmlOutput h3, #renderedContentFull h3 { font-size: 1.3em; font-weight: 600; }
+#htmlOutput h4, #renderedContentFull h4 { font-size: 1.1em; font-weight: 600; }
+
+#htmlOutput p, #renderedContentFull p {
+    margin-bottom: 1.25em; /* Slightly more space after paragraphs */
+}
+
+/* Code blocks will be styled by Prism.js theme (okaidia), but we can set a margin */
+#htmlOutput pre[class*="language-"], #renderedContentFull pre[class*="language-"] {
+    margin-bottom: 1.5em;
+    border-radius: 0.375rem; /* Tailwind's rounded-md */
+    padding: 1em; /* Ensure padding if not fully covered by Prism theme */
+    overflow-x: auto;
+}
+
+/* Inline code */
+#htmlOutput :not(pre) > code[class*="language-"],
+#renderedContentFull :not(pre) > code[class*="language-"],
+#htmlOutput code, #renderedContentFull code { /* General inline code */
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    background-color: #f3f4f6; /* Tailwind gray-100 */
+    color: #dd1144; /* A common color for inline code, or use a gray */
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem; /* Tailwind's rounded-sm */
+    font-size: 0.875em; /* Slightly smaller */
+}
+
+#htmlOutput pre code, #renderedContentFull pre code {
+    background-color: transparent !important; /* Ensure no background for code inside pre if Prism handles it */
+    color: inherit !important; /* Inherit color from pre, Prism will override */
+    padding: 0 !important; /* No padding, Prism handles it */
+    font-size: 1em !important; /* Reset to pre's font size or manage carefully */
+}
+
+
+#htmlOutput table, #renderedContentFull table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5em;
+    border: 1px solid #d1d5db; /* Tailwind gray-300 */
+    font-size: 0.9em; /* Slightly smaller table text */
+}
+
+#htmlOutput th, #renderedContentFull th,
+#htmlOutput td, #renderedContentFull td {
+    border: 1px solid #e5e7eb; /* Tailwind gray-200 */
+    padding: 0.75em 1em; /* More horizontal padding */
+    text-align: left;
+}
+
+#htmlOutput th, #renderedContentFull th {
+    background-color: #f9fafb; /* Tailwind gray-50 */
+    font-weight: 600;
+    color: #374151; /* Tailwind gray-700 */
+}
+
+#htmlOutput .mermaid, #renderedContentFull .mermaid {
+    margin-bottom: 1.5em;
+    text-align: center;
+    padding: 1em;
+    border: 1px solid #e5e7eb; /* Optional border for mermaid diagrams */
+    border-radius: 0.375rem;
+    background-color: #f9fafb; /* Light background for mermaid */
+}
+
+#htmlOutput .layout-columns, #renderedContentFull .layout-columns {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5em;
+}
+
+#htmlOutput .layout-columns .column, #renderedContentFull .layout-columns .column {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Responsive adjustments for columns */
+@media (max-width: 768px) {
+    #htmlOutput .layout-columns, #renderedContentFull .layout-columns {
+        flex-direction: column;
+    }
+}
+
+#htmlOutput .anchor-link, #renderedContentFull .anchor-link {
+    visibility: hidden;
+    margin-left: 0.3em;
+    color: #9ca3af; /* Tailwind gray-400 */
+    text-decoration: none;
+    font-size: 0.8em;
+    font-weight: normal; /* Ensure it's not bold like headings */
+    vertical-align: middle;
+}
+
+#htmlOutput h1:hover .anchor-link, #renderedContentFull h1:hover .anchor-link,
+#htmlOutput h2:hover .anchor-link, #renderedContentFull h2:hover .anchor-link,
+#htmlOutput h3:hover .anchor-link, #renderedContentFull h3:hover .anchor-link,
+#htmlOutput h4:hover .anchor-link, #renderedContentFull h4:hover .anchor-link,
+#htmlOutput h5:hover .anchor-link, #renderedContentFull h5:hover .anchor-link,
+#htmlOutput h6:hover .anchor-link, #renderedContentFull h6:hover .anchor-link {
+    visibility: visible;
+}
+
+#htmlOutput .anchor-link:hover, #renderedContentFull .anchor-link:hover {
+    color: #4b5563; /* Tailwind gray-600 */
+    text-decoration: underline;
+}
+
+/* Styling for paragraph content that might contain newlines (like in layout columns) */
+#htmlOutput .layout-columns p, #renderedContentFull .layout-columns p {
+    white-space: pre-line;
+}
+
+/* Ensure bold and italic from markdown are respected */
+#htmlOutput strong, #renderedContentFull strong {
+    font-weight: bold;
+}
+#htmlOutput em, #renderedContentFull em {
+    font-style: italic;
+}
+
