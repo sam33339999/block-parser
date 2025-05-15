@@ -154,6 +154,14 @@
 }
 ```
 
+7.  **`anchorLink`** (錨點/普通鏈接)
+    *   `data`:
+        *   `text`: 字串，鏈接顯示的文字。
+        *   `href`: 字串，鏈接的目標地址。
+            *   以 `#` 開頭 (例如：`#section1`)：將作為頁內錨點，在當前頁面跳轉。
+            *   以 `http://`, `https://` 或 `//` 開頭 (例如：`https://www.example.com`)：將作為外部鏈接，在新瀏覽器標籤頁中打開。
+            *   其他相對路徑 (例如：`/about.html`, `another-page.html`)：將作為站內頁面鏈接，在當前頁面跳轉。
+
 # 如何引導 LLM 輸出此格式
 您需要在給 LLM 的 prompt 中包含以下信息：
 
@@ -186,6 +194,7 @@
 - "mermaid": data 包含 "code" (Mermaid 語法字符串)。
 - "table": data 包含 "headers" (字符串陣列) 和 "rows" (二維字符串陣列)。
 - "layoutColumns": data 包含 "columnCount" (數字，如 2 或 3) 和 "columns" (一個陣列，每個元素是該欄的區塊列表)。
+- "anchorLink": data 包含 "text" (字符串) 和 "href" (字符串)。
 
 例如，一個包含標題和段落的簡單輸出可能如下：
 {
@@ -273,6 +282,14 @@ PROMPTS:
         *   `columnCount`: 數字，表示欄位的數量 (例如：2 或 3)。
         *   `distribution` (可選): 一個字串陣列，表示各欄位的寬度比例 (例如：`["50%", "50%"]`, `["1fr", "2fr"]`)。如果未提供，可使用均分。
         *   `columns`: 一個陣列，其長度應等於 `columnCount`。此陣列的每個元素本身又是一個**區塊物件的陣列**，代表該欄位内包含的內容區塊。這些內嵌的區塊物件同樣遵循本提示中定義的 `type` 和 `data` 結構。
+
+7.  **`anchorLink`** (錨點/普通鏈接)
+    *   `data`:
+        *   `text`: 字串，鏈接顯示的文字。
+        *   `href`: 字串，鏈接的目標地址。
+            *   以 `#` 開頭 (例如：`#section1`)：將作為頁內錨點，在當前頁面跳轉。
+            *   以 `http://`, `https://` 或 `//` 開頭 (例如：`https://www.example.com`)：將作為外部鏈接，在新瀏覽器標籤頁中打開。
+            *   其他相對路徑 (例如：`/about.html`, `another-page.html`)：將作為站內頁面鏈接，在當前頁面跳轉。
 
 **輸出範例：**
 

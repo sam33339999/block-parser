@@ -34,6 +34,9 @@ function parseJsonToHtml(jsonDocument) {
             case 'image': // 新增 image 类型的处理
                 html += handleImage(block.data);
                 break;
+            case 'anchorLink': // 新增 anchorLink 类型的处理
+                html += handleAnchorLink(block.data);
+                break;
             default:
                 console.warn(`Unsupported block type: ${block.type}`);
         }
@@ -408,6 +411,9 @@ function handleLayoutColumns(data) {
                         case 'image':
                             columnsHtml += handleImage(block.data);
                             break;
+                        case 'anchorLink':
+                            columnsHtml += handleAnchorLink(block.data);
+                            break;
                         default:
                             console.warn(`Unsupported block type in layout column: ${block.type}`);
                     }
@@ -433,18 +439,41 @@ function handleLayoutColumns(data) {
  */
 function handleImage(data) {
     if (!data || !data.url) {
-        console.warn('Image block is missing URL.');
+        console.warn('Image: Missing URL.');
         return '';
     }
-    const altText = data.caption || data.alt || ''; // 使用 caption 或 alt 作为 alt 文本
-    const captionHtml = data.caption ? `<figcaption>${escapeHtml(data.caption)}</figcaption>` : '';
-    // 简单实现，可以根据需要添加更多 class 或样式
-    return `
-<figure class="image-block">
-    <img src="${escapeHtml(data.url)}" alt="${escapeHtml(altText)}">
-    ${captionHtml}
-</figure>
-`;
+    const url = escapeHtml(data.url);
+    const alt = data.alt ? escapeHtml(data.alt) : '';
+    const caption = data.caption ? `<figcaption class="text-sm text-center text-gray-500 mt-2">${escapeHtml(data.caption)}</figcaption>` : '';
+    // Added 'mx-auto' for centering and 'my-4' for vertical margin
+    return `<figure class="my-4"><img src="${url}" alt="${alt}" class="max-w-full h-auto rounded-md shadow-md mx-auto">${caption}</figure>\n`;
+}
+
+/**
+ * Handles anchorLink blocks.
+ * @param {object} data The data object for the anchorLink block.
+ * @returns {string} The HTML string for the anchor link.
+ */
+function handleAnchorLink(data) {
+    if (!data || typeof data.text !== 'string' || typeof data.href !== 'string') {
+        console.warn('AnchorLink: Missing text or href string.');
+        return '';
+    }
+
+    const text = escapeHtml(data.text);
+    const hrefAttribute = escapeHtml(data.href); // Escape href for attribute context
+
+    let targetAttribute = '';
+    let relAttribute = '';
+
+    // Check if it's an external link (starts with http://, https://) or a protocol-relative URL (starts with //)
+    if (/^(https?:)?\/\//.test(data.href)) { // Check original data.href
+        targetAttribute = ' target="_blank"';
+        relAttribute = ' rel="noopener noreferrer"';
+    }
+    // Internal page links (e.g., /about.html or about.html) and anchors (#section) will not have target="_blank"
+
+    return `<p><a href="${hrefAttribute}"${targetAttribute}${relAttribute}>${text}</a></p>\n`; // Wrap in <p> for block display
 }
 
 // 辅助函数，用于转义 HTML，避免 XSS
