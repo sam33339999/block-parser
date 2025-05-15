@@ -1,0 +1,409 @@
+{
+    "document": {
+      "blocks": [
+        {
+          "type": "heading",
+          "data": {
+            "level": 1,
+            "text": "PostgreSQL 資料庫系統：深入探索底層架構與存儲機制",
+            "anchorId": "postgres-architecture"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "PostgreSQL 是一個功能強大的開源關聯式資料庫管理系統（RDBMS），它的底層架構設計精妙，能夠提供高效的資料存儲和檢索。本文將深入探討 PostgreSQL 的底層架構，特別關注它的存儲機制、頁（Page）概念以及相關的核心知識。"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "PostgreSQL 整體架構概覽",
+            "anchorId": "overall-architecture"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "PostgreSQL 採用客戶端-伺服器架構，主要包含以下幾個核心組件："
+          }
+        },
+        {
+          "type": "mermaid",
+          "data": {
+            "code": "graph TD\n    A[客戶端應用程式] -->|連接| B[Postmaster 主程序]\n    B --> C[Backend 程序]\n    C --> D[共享記憶體]\n    C --> E[磁碟儲存]\n    E --> F[資料檔案]\n    E --> G[WAL 日誌]\n    E --> H[控制檔案]\n    D --> I[共享緩衝區]\n    D --> J[WAL 緩衝區]\n    D --> K[鎖機制]"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "存儲系統的層次結構",
+            "anchorId": "storage-hierarchy"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "PostgreSQL 的存儲系統採用多層次結構設計，從邏輯到物理層面可以分為："
+          }
+        },
+        {
+          "type": "table",
+          "data": {
+            "headers": ["層級", "名稱", "說明"],
+            "rows": [
+              ["邏輯層", "Database", "最高層級的邏輯容器"],
+              ["邏輯層", "Schema", "資料庫內的命名空間"],
+              ["邏輯層", "Table", "實際存儲資料的邏輯結構"],
+              ["物理層", "Tablespace", "資料檔案的物理存儲位置"],
+              ["物理層", "Data File", "實際的檔案系統檔案"],
+              ["物理層", "Page/Block", "最小的 I/O 存儲單位"]
+            ]
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "頁（Page）的概念與結構",
+            "anchorId": "page-concept"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "在 PostgreSQL 中，**頁（Page）** 是資料存儲的基本單位，預設大小為 8KB。每個資料檔案都由多個頁組成，而每個頁都有固定的結構。"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 3,
+            "text": "頁的基本結構",
+            "anchorId": "page-structure"
+          }
+        },
+        {
+          "type": "mermaid",
+          "data": {
+            "code": "graph TB\n    A[Page Header] --> B[24 bytes]\n    C[Item Identifiers] --> D[4 bytes each]\n    E[Free Space] --> F[Variable size]\n    G[Items/Tuples] --> H[Variable size]\n    I[Special Space] --> J[Variable size]\n    \n    K[8KB Page] --> A\n    K --> C\n    K --> E\n    K --> G\n    K --> I"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "頁的結構包含以下幾個部分："
+          }
+        },
+        {
+          "type": "layoutColumns",
+          "data": {
+            "columnCount": 2,
+            "columns": [
+              [
+                {
+                  "type": "heading",
+                  "data": {
+                    "level": 4,
+                    "text": "頁頭（Page Header）"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "data": {
+                    "text": "包含頁的元資料，如頁大小、版本號、特殊空間偏移量等。"
+                  }
+                },
+                {
+                  "type": "heading",
+                  "data": {
+                    "level": 4,
+                    "text": "項目識別碼（Item Identifiers）"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "data": {
+                    "text": "每個 tuple 的位置索引，每個識別碼佔用 4 bytes。"
+                  }
+                }
+              ],
+              [
+                {
+                  "type": "heading",
+                  "data": {
+                    "level": 4,
+                    "text": "自由空間（Free Space）"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "data": {
+                    "text": "頁中尚未使用的空間，新資料可以寫入這裡。"
+                  }
+                },
+                {
+                  "type": "heading",
+                  "data": {
+                    "level": 4,
+                    "text": "實際資料（Items/Tuples）"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "data": {
+                    "text": "實際存儲的資料行，從頁尾向前生長。"
+                  }
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 3,
+            "text": "頁頭結構詳解",
+            "anchorId": "page-header-details"
+          }
+        },
+        {
+          "type": "code",
+          "data": {
+            "language": "c",
+            "code": "typedef struct PageHeaderData\n{\n    PageXLogRecPtr pd_lsn;      // 最後修改的 WAL 日誌位置\n    uint16 pd_checksum;         // 頁面校驗和\n    uint16 pd_flags;            // 標誌位\n    LocationIndex pd_lower;     // 自由空間的開始位置\n    LocationIndex pd_upper;     // 自由空間的結束位置\n    LocationIndex pd_special;   // 特殊空間的開始位置\n    uint16 pd_pagesize_version; // 頁面大小和版本號\n    TransactionId pd_prune_xid; // 最老的未清理事務 ID\n    ItemIdData pd_linp[FLEXIBLE_ARRAY_MEMBER]; // 項目指標陣列\n} PageHeaderData;"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "Tuple 的存儲結構",
+            "anchorId": "tuple-structure"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "在 PostgreSQL 中，每一行資料稱為一個 **tuple**。Tuple 不僅包含實際的資料，還包含了系統所需的元資料。"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 3,
+            "text": "Tuple Header",
+            "anchorId": "tuple-header"
+          }
+        },
+        {
+          "type": "code",
+          "data": {
+            "language": "c",
+            "code": "typedef struct HeapTupleHeaderData\n{\n    HeapTupleFields t_heap;\n    DatumTupleFields t_datum;\n    \n    ItemPointerData t_ctid;     // 當前 tuple 的 TID\n    uint16 t_infomask2;         // 各種屬性標誌\n    uint16 t_infomask;          // 各種屬性標誌\n    uint8 t_hoff;               // header 的長度\n    \n    bits8 t_bits[FLEXIBLE_ARRAY_MEMBER]; // null bitmap\n} HeapTupleHeaderData;"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "Tuple header 包含了多版本併發控制（MVCC）所需的重要資訊："
+          }
+        },
+        {
+          "type": "table",
+          "data": {
+            "headers": ["欄位", "用途", "說明"],
+            "rows": [
+              ["t_xmin", "插入事務 ID", "建立此 tuple 的事務 ID"],
+              ["t_xmax", "刪除事務 ID", "刪除或更新此 tuple 的事務 ID"],
+              ["t_cid", "命令 ID", "在事務中的命令順序"],
+              ["t_ctid", "Tuple ID", "指向自己或新版本的指標"],
+              ["t_infomask", "標誌位", "可見性和其他狀態資訊"]
+            ]
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "MVCC 與頁面版本管理",
+            "anchorId": "mvcc-page-management"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "PostgreSQL 使用多版本併發控制（MVCC）來實現事務隔離。每次更新都會建立 tuple 的新版本，而不是直接修改原有資料。"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 3,
+            "text": "版本鏈",
+            "anchorId": "version-chain"
+          }
+        },
+        {
+          "type": "mermaid",
+          "data": {
+            "code": "graph LR\n    A[Tuple v1<br/>xmin=100<br/>xmax=200] -->|t_ctid| B[Tuple v2<br/>xmin=200<br/>xmax=300]\n    B -->|t_ctid| C[Tuple v3<br/>xmin=300<br/>xmax=∞]\n    \n    style A fill:#ffcccc\n    style B fill:#ffffcc\n    style C fill:#ccffcc"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "緩衝區管理",
+            "anchorId": "buffer-management"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "PostgreSQL 使用共享緩衝區（Shared Buffer）來緩存頻繁訪問的資料頁，減少磁碟 I/O。"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 3,
+            "text": "緩衝區描述符",
+            "anchorId": "buffer-descriptor"
+          }
+        },
+        {
+          "type": "code",
+          "data": {
+            "language": "c",
+            "code": "typedef struct BufferDesc\n{\n    BufferTag tag;              // 緩衝區標識\n    int buf_id;                 // 緩衝區 ID\n    \n    pg_atomic_uint32 state;     // 狀態標誌\n    \n    int wait_backend_pid;       // 等待的後端程序 PID\n    int freeNext;              // 自由列表中的下一個\n    \n    LWLock content_lock;       // 內容鎖\n} BufferDesc;"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 3,
+            "text": "時鐘掃描演算法",
+            "anchorId": "clock-sweep"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "PostgreSQL 使用時鐘掃描演算法來管理緩衝區的替換策略，每個緩衝區都有一個使用計數器，決定何時可以被替換。"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "WAL（Write-Ahead Logging）",
+            "anchorId": "wal-logging"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "WAL 是 PostgreSQL 實現資料持久性和故障恢復的核心機制。所有對資料庫的修改都會先寫入 WAL 日誌。"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 3,
+            "text": "WAL 記錄結構",
+            "anchorId": "wal-record"
+          }
+        },
+        {
+          "type": "code",
+          "data": {
+            "language": "c",
+            "code": "typedef struct XLogRecord\n{\n    uint32 xl_tot_len;          // 記錄總長度\n    TransactionId xl_xid;       // 事務 ID\n    XLogRecPtr xl_prev;         // 前一條記錄的位置\n    uint8 xl_info;              // 標誌位\n    RmgrId xl_rmid;             // 資源管理器 ID\n    pg_crc32c xl_crc;          // CRC 校驗碼\n} XLogRecord;"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "空間回收與 VACUUM",
+            "anchorId": "vacuum-process"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "由於 MVCC 的特性，刪除和更新操作不會立即釋放空間。PostgreSQL 使用 VACUUM 程序來清理不再需要的 tuple 版本。"
+          }
+        },
+        {
+          "type": "mermaid",
+          "data": {
+            "code": "graph TD\n    A[VACUUM 程序] --> B[掃描死亡 tuples]\n    B --> C[標記可回收空間]\n    C --> D[更新可見性地圖]\n    D --> E[更新自由空間地圖]\n    E --> F[可選：壓縮頁面]"
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "效能優化建議",
+            "anchorId": "performance-tips"
+          }
+        },
+        {
+          "type": "layoutColumns",
+          "data": {
+            "columnCount": 2,
+            "columns": [
+              [
+                {
+                  "type": "heading",
+                  "data": {
+                    "level": 3,
+                    "text": "存儲層面優化"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "data": {
+                    "text": "• 適當設置 **shared_buffers** 大小\n• 調整 **checkpoint** 頻率\n• 定期執行 **VACUUM** 和 **ANALYZE**\n• 使用適當的表空間分配策略"
+                  }
+                }
+              ],
+              [
+                {
+                  "type": "heading",
+                  "data": {
+                    "level": 3,
+                    "text": "查詢層面優化"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "data": {
+                    "text": "• 建立合適的索引\n• 使用 **EXPLAIN** 分析查詢計劃\n• 避免大量小事務\n• 合理使用連接池"
+                  }
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "type": "heading",
+          "data": {
+            "level": 2,
+            "text": "總結",
+            "anchorId": "conclusion"
+          }
+        },
+        {
+          "type": "paragraph",
+          "data": {
+            "text": "PostgreSQL 的底層存儲系統設計精巧，透過頁面管理、MVCC、WAL 等機制，實現了高效能和高可靠性的資料存儲。理解這些底層概念對於資料庫調優和問題診斷具有重要意義。無論是開發人員還是 DBA，深入瞭解這些機制都能幫助更好地使用和維護 PostgreSQL 資料庫系統。"
+          }
+        }
+      ]
+    }
+   }

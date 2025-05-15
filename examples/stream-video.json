@@ -1,0 +1,330 @@
+{
+  "document": {
+    "blocks": [
+      {
+        "type": "heading",
+        "data": {
+          "level": 1,
+          "text": "直播串流技術深度解析：協議比較、OSI模型與程式實現",
+          "anchorId": "streaming-tech-overview"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "隨著直播產業的蓬勃發展，了解直播串流技術的底層原理變得越來越重要。本文將深入探討各種直播串流協議的特點、它們在OSI模型中的位置，以及實際的程式實現方式。"
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "常見直播串流協議比較",
+          "anchorId": "protocol-comparison"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "在直播串流領域，有多種協議可供選擇，每種協議都有其獨特的優缺點和適用場景。以下是主流協議的詳細比較："
+        }
+      },
+      {
+        "type": "table",
+        "data": {
+          "headers": [
+            "協議名稱",
+            "傳輸方式",
+            "延遲",
+            "主要用途",
+            "優點",
+            "缺點"
+          ],
+          "rows": [
+            [
+              "RTMP",
+              "TCP",
+              "2-5秒",
+              "直播推流",
+              "穩定、廣泛支持",
+              "已過時、需要Flash"
+            ],
+            [
+              "HLS",
+              "HTTP",
+              "10-30秒",
+              "大規模分發",
+              "高兼容性、可用CDN",
+              "延遲高"
+            ],
+            [
+              "DASH",
+              "HTTP",
+              "10-30秒",
+              "自適應串流",
+              "標準化、靈活",
+              "複雜度高"
+            ],
+            [
+              "WebRTC",
+              "UDP/TCP",
+              "<1秒",
+              "即時通訊",
+              "超低延遲、P2P",
+              "規模化困難"
+            ],
+            ["SRT", "UDP", "0.5-2秒", "專業直播", "低延遲、可靠", "支持度較低"]
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "OSI模型中的串流協議層級",
+          "anchorId": "osi-model-streaming"
+        }
+      },
+      {
+        "type": "mermaid",
+        "data": {
+          "code": "graph TD\n    A[應用層 - Layer 7] --> B[HLS/DASH/RTMP]\n    C[表示層 - Layer 6] --> D[媒體編碼/解碼]\n    E[會話層 - Layer 5] --> F[串流會話管理]\n    G[傳輸層 - Layer 4] --> H[TCP/UDP]\n    I[網路層 - Layer 3] --> J[IP]\n    K[資料鏈路層 - Layer 2] --> L[Ethernet]\n    M[實體層 - Layer 1] --> N[網路硬體]\n    \n    B --> G\n    F --> G"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "不同的串流協議在OSI模型中的工作層級不同。**RTMP**、**HLS**和**DASH**主要工作在應用層（第7層），而**WebRTC**則涉及多個層級，從應用層到傳輸層都有涉及。"
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "串流技術架構設計",
+          "anchorId": "streaming-architecture"
+        }
+      },
+      {
+        "type": "layoutColumns",
+        "data": {
+          "columnCount": 2,
+          "columns": [
+            [
+              {
+                "type": "heading",
+                "data": { "level": 3, "text": "推流端架構" }
+              },
+              {
+                "type": "paragraph",
+                "data": {
+                  "text": "推流端負責採集、編碼和發送視頻流。主要組件包括："
+                }
+              },
+              {
+                "type": "paragraph",
+                "data": {
+                  "text": "• **視頻採集**：攝像頭、屏幕錄製\n• **音頻採集**：麥克風、系統音頻\n• **編碼器**：H.264/H.265視頻編碼\n• **封裝器**：將編碼數據封裝成協議格式\n• **推流器**：通過網路發送數據"
+                }
+              }
+            ],
+            [
+              {
+                "type": "heading",
+                "data": { "level": 3, "text": "服務端架構" }
+              },
+              {
+                "type": "paragraph",
+                "data": {
+                  "text": "服務端負責接收、處理和分發視頻流。核心功能包括："
+                }
+              },
+              {
+                "type": "paragraph",
+                "data": {
+                  "text": "• **流媒體服務器**：接收和管理串流\n• **轉碼服務**：格式轉換、多碼率生成\n• **CDN分發**：全球內容分發\n• **負載均衡**：流量分配管理\n• **監控系統**：性能和質量監控"
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "RTMP推流實現範例",
+          "anchorId": "rtmp-implementation"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "以下是使用**FFmpeg**和**Node.js**實現RTMP推流的基本範例："
+        }
+      },
+      {
+        "type": "code",
+        "data": {
+          "language": "javascript",
+          "code": "const NodeMediaServer = require('node-media-server');\n\n// 配置RTMP服務器\nconst config = {\n  rtmp: {\n    port: 1935,\n    chunk_size: 60000,\n    gop_cache: true,\n    ping: 30,\n    ping_timeout: 60\n  },\n  http: {\n    port: 8000,\n    allow_origin: '*'\n  }\n};\n\n// 創建並啟動服務器\nconst nms = new NodeMediaServer(config);\nnms.run();\n\n// 監聽串流事件\nnms.on('prePublish', (id, StreamPath, args) => {\n  console.log('[NodeEvent on prePublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);\n});\n\nnms.on('postPublish', (id, StreamPath, args) => {\n  console.log('[NodeEvent on postPublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);\n});"
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 3,
+          "text": "FFmpeg推流指令",
+          "anchorId": "ffmpeg-commands"
+        }
+      },
+      {
+        "type": "code",
+        "data": {
+          "language": "bash",
+          "code": "# 推送本地視頻文件到RTMP服務器\nffmpeg -re -i input.mp4 -c:v libx264 -preset veryfast -maxrate 3000k \\\n  -bufsize 6000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 160k -ar 44100 \\\n  -ac 2 -f flv rtmp://localhost/live/stream\n\n# 推送攝像頭和麥克風\nffmpeg -f avfoundation -i \"0:0\" -c:v libx264 -preset ultrafast \\\n  -tune zerolatency -c:a aac -f flv rtmp://localhost/live/stream"
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "HLS播放實現",
+          "anchorId": "hls-playback"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "HLS是目前最廣泛使用的串流協議之一。以下是使用**hls.js**在網頁中實現HLS播放的範例："
+        }
+      },
+      {
+        "type": "code",
+        "data": {
+          "language": "html",
+          "code": "<!DOCTYPE html>\n<html>\n<head>\n    <title>HLS Player</title>\n    <script src=\"https://cdn.jsdelivr.net/npm/hls.js@latest\"></script>\n</head>\n<body>\n    <video id=\"video\" controls width=\"800\" height=\"450\"></video>\n    <script>\n        const video = document.getElementById('video');\n        const videoSrc = 'https://your-server.com/live/stream.m3u8';\n        \n        if (Hls.isSupported()) {\n            const hls = new Hls({\n                debug: true,\n                enableWorker: true,\n                lowLatencyMode: true\n            });\n            \n            hls.loadSource(videoSrc);\n            hls.attachMedia(video);\n            \n            hls.on(Hls.Events.MANIFEST_PARSED, function() {\n                video.play();\n            });\n            \n            // 錯誤處理\n            hls.on(Hls.Events.ERROR, function(event, data) {\n                if (data.fatal) {\n                    switch(data.type) {\n                        case Hls.ErrorTypes.NETWORK_ERROR:\n                            console.error('網路錯誤');\n                            hls.startLoad();\n                            break;\n                        case Hls.ErrorTypes.MEDIA_ERROR:\n                            console.error('媒體錯誤');\n                            hls.recoverMediaError();\n                            break;\n                        default:\n                            hls.destroy();\n                            break;\n                    }\n                }\n            });\n        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {\n            // 原生HLS支持（iOS Safari）\n            video.src = videoSrc;\n        }\n    </script>\n</body>\n</html>"
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "WebRTC實時通訊實現",
+          "anchorId": "webrtc-implementation"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "WebRTC提供了超低延遲的實時通訊能力。以下是一個簡單的WebRTC連接建立過程："
+        }
+      },
+      {
+        "type": "code",
+        "data": {
+          "language": "javascript",
+          "code": "// 創建RTCPeerConnection\nconst pc = new RTCPeerConnection({\n    iceServers: [{\n        urls: 'stun:stun.l.google.com:19302'\n    }]\n});\n\n// 獲取本地媒體流\nasync function startStream() {\n    try {\n        const stream = await navigator.mediaDevices.getUserMedia({\n            video: true,\n            audio: true\n        });\n        \n        // 將媒體流添加到連接\n        stream.getTracks().forEach(track => {\n            pc.addTrack(track, stream);\n        });\n        \n        // 創建offer\n        const offer = await pc.createOffer();\n        await pc.setLocalDescription(offer);\n        \n        // 發送offer到信令服務器\n        signaling.send({\n            type: 'offer',\n            offer: offer\n        });\n    } catch (error) {\n        console.error('獲取媒體流失敗:', error);\n    }\n}\n\n// 處理ICE候選\npc.onicecandidate = (event) => {\n    if (event.candidate) {\n        signaling.send({\n            type: 'ice-candidate',\n            candidate: event.candidate\n        });\n    }\n};\n\n// 處理遠端媒體流\npc.ontrack = (event) => {\n    const remoteVideo = document.getElementById('remoteVideo');\n    remoteVideo.srcObject = event.streams[0];\n};"
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "性能優化與最佳實踐",
+          "anchorId": "optimization-best-practices"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "在實現直播串流系統時，性能優化是關鍵。以下是一些重要的優化策略："
+        }
+      },
+      { "type": "heading", "data": { "level": 3, "text": "1. 編碼優化" } },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "• **動態位元率調整**：根據網路狀況自動調整編碼位元率\n• **GOP設置**：合理設置關鍵幀間隔，平衡延遲和視頻質量\n• **硬體加速**：使用GPU進行視頻編碼和解碼"
+        }
+      },
+      { "type": "heading", "data": { "level": 3, "text": "2. 網路優化" } },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "• **多路徑傳輸**：使用多個網路路徑提高可靠性\n• **智能路由**：動態選擇最佳傳輸路徑\n• **緩衝區管理**：優化緩衝區大小以平衡延遲和流暢度"
+        }
+      },
+      {
+        "type": "code",
+        "data": {
+          "language": "javascript",
+          "code": "// 自適應位元率調整示例\nclass AdaptiveBitrateController {\n    constructor() {\n        this.currentBitrate = 2000000; // 2 Mbps\n        this.maxBitrate = 5000000;     // 5 Mbps\n        this.minBitrate = 500000;      // 500 Kbps\n        this.rttHistory = [];\n    }\n    \n    adjustBitrate(rtt, packetLoss) {\n        this.rttHistory.push(rtt);\n        \n        // 保留最近10次的RTT記錄\n        if (this.rttHistory.length > 10) {\n            this.rttHistory.shift();\n        }\n        \n        const avgRtt = this.rttHistory.reduce((a, b) => a + b, 0) / this.rttHistory.length;\n        \n        // 根據網路狀況調整位元率\n        if (avgRtt < 50 && packetLoss < 0.01) {\n            // 網路狀況良好，提高位元率\n            this.currentBitrate = Math.min(this.currentBitrate * 1.1, this.maxBitrate);\n        } else if (avgRtt > 100 || packetLoss > 0.05) {\n            // 網路狀況差，降低位元率\n            this.currentBitrate = Math.max(this.currentBitrate * 0.8, this.minBitrate);\n        }\n        \n        return Math.round(this.currentBitrate);\n    }\n}"
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "監控與故障處理",
+          "anchorId": "monitoring-troubleshooting"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "建立完善的監控系統對於維護直播服務的穩定性至關重要："
+        }
+      },
+      {
+        "type": "table",
+        "data": {
+          "headers": ["監控指標", "正常範圍", "異常處理"],
+          "rows": [
+            ["位元率", "目標±10%", "調整編碼參數"],
+            ["幀率", "25-30 fps", "檢查編碼器負載"],
+            ["延遲", "<5秒", "優化緩衝區設置"],
+            ["丟包率", "<1%", "切換傳輸路徑"],
+            ["CPU使用率", "<80%", "負載均衡或擴容"]
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "data": {
+          "level": 2,
+          "text": "未來發展趨勢",
+          "anchorId": "future-trends"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "直播串流技術正在快速發展，以下是一些值得關注的趨勢："
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "• **AV1編碼**：新一代開源視頻編碼標準，提供更高的壓縮效率\n• **5G網路**：超高速、低延遲的網路將改變直播體驗\n• **邊緣計算**：將處理能力下沉到網路邊緣，降低延遲\n• **AI增強**：使用人工智能優化視頻質量和傳輸效率\n• **VR/AR直播**：沉浸式體驗將成為下一個發展方向"
+        }
+      },
+      {
+        "type": "heading",
+        "data": { "level": 2, "text": "總結", "anchorId": "conclusion" }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "直播串流技術涉及多個層面的知識，從底層的網路協議到上層的應用實現。選擇合適的串流協議需要考慮延遲需求、規模要求、設備相容性等多個因素。通過深入理解OSI模型中各協議的工作原理，並結合實際的程式實現，開發者可以構建出高效、穩定的直播系統。"
+        }
+      },
+      {
+        "type": "paragraph",
+        "data": {
+          "text": "隨著技術的不斷進步，直播串流將變得更加普及和便捷。無論是**超低延遲的WebRTC**、**大規模分發的HLS**，還是新興的**SRT協議**，每種技術都有其獨特的應用場景。理解這些技術的原理和實現方式，將幫助我們在實際項目中做出更好的技術選擇。"
+        }
+      }
+    ]
+  }
+}
