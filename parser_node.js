@@ -44,35 +44,40 @@ function handleHeading(data) {
     if (data.anchorId) {
         anchorLink = " <a href=\"#" + data.anchorId + "\" class=\"anchor-link\" aria-label=\"Link to this section\">#</a>";
     }
-    const escapedText = data.text.replace(/[&<>\'\"/]/g, function (s) {
-        return {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            "\"": "&quot;",
-            "\'": "&#39;",
-            "/": "&#x2F;"
-        }[s];
-    });
+    const escapedText = escapeHtml(data.text);
     return "<h" + level + anchorId + ">" + escapedText + anchorLink + "</h" + level + ">\n";
 }
 
 function handleParagraph(data) {
     if (!data || typeof data.text !== "string") {
+        console.warn('Paragraph: Missing text string.');
         return "";
     }
-    let text = data.text.replace(/[&<>\'\"/]/g, function (s) {
-        return {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            "\"": "&quot;",
-            "\'": "&#39;",
-            "/": "&#x2F;"
-        }[s];
-    });
-    text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-    text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+    let text = escapeHtml(data.text);
+
+    // Apply custom color/background color tags FIRST
+    text = text.replace(
+        /\[color:([^,]+),bgColor:([^,\]]+)\]([\s\S]*?)\[\/color\]/g,
+        (match, color, bgColor, content) => `<span style="color: ${escapeHtml(color.trim())}; background-color: ${escapeHtml(bgColor.trim())};">${content}</span>`
+    );
+    text = text.replace(
+        /\[color:([^,\]]+)\]([\s\S]*?)\[\/color\]/g,
+        (match, color, content) => `<span style="color: ${escapeHtml(color.trim())};">${content}</span>`
+    );
+    text = text.replace(
+        /\[bgColor:([^,\]]+)\]([\s\S]*?)\[\/bgColor\]/g,
+        (match, bgColor, content) => `<span style="background-color: ${escapeHtml(bgColor.trim())};">${content}</span>`
+    );
+
+    // Convert newline characters to <br> tags
+    text = text.replace(/\n/g, '<br>\n');
+    
+    // Markdown-like conversions (order matters for correctness)
+    text = text.replace(/\*{4}([^*]+)\*{4}/g, '<strong>$1</strong>'); // ****text**** (bold)
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); // **text** (Bold)
+    text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');       // *text* (Italic)
+    
     return "<p>" + text + "</p>\n";
 }
 
@@ -81,16 +86,7 @@ function handleCode(data) {
         return "";
     }
     const language = data.language ? "language-" + data.language : "language-none";
-    const escapedCode = data.code.replace(/[&<>\'\"/]/g, function (s) {
-        return {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            "\"": "&quot;",
-            "\'": "&#39;",
-            "/": "&#x2F;"
-        }[s];
-    });
+    const escapedCode = escapeHtml(data.code);
     return "<pre><code class=\"" + language + "\">" + escapedCode + "</code></pre>\n";
 }
 
@@ -98,16 +94,7 @@ function handleMermaid(data) {
     if (!data || typeof data.code !== "string") {
         return "";
     }
-    const escapedMermaidCode = data.code.replace(/[&<>\'\"/]/g, function (s) {
-        return {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            "\"": "&quot;",
-            "\'": "&#39;",
-            "/": "&#x2F;"
-        }[s];
-    });
+    const escapedMermaidCode = escapeHtml(data.code);
     return "<div class=\"mermaid\">" + escapedMermaidCode + "</div>\n";
 }
 
@@ -118,16 +105,7 @@ function handleTable(data) {
     let tableHtml = "<table>\n";
     tableHtml += "  <thead>\n    <tr>\n";
     data.headers.forEach(header => {
-        const escapedHeader = String(header).replace(/[&<>\'\"/]/g, function (s) {
-            return {
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                "\"": "&quot;",
-                "\'": "&#39;",
-                "/": "&#x2F;"
-            }[s];
-        });
+        const escapedHeader = escapeHtml(header);
         tableHtml += "      <th>" + escapedHeader + "</th>\n";
     });
     tableHtml += "    </tr>\n  </thead>\n";
@@ -136,16 +114,7 @@ function handleTable(data) {
         tableHtml += "    <tr>\n";
         if (Array.isArray(row)) {
             row.forEach(cell => {
-                const escapedCell = String(cell).replace(/[&<>\'\"/]/g, function (s) {
-                    return {
-                        "&": "&amp;",
-                        "<": "&lt;",
-                        ">": "&gt;",
-                        "\"": "&quot;",
-                        "\'": "&#39;",
-                        "/": "&#x2F;"
-                    }[s];
-                });
+                const escapedCell = escapeHtml(cell);
                 tableHtml += "      <td>" + escapedCell + "</td>\n";
             });
         }
@@ -194,6 +163,19 @@ function handleLayoutColumns(data) {
     return columnsHtml;
 }
 
+// Helper function to escape HTML characters
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') {
+        return '';
+    }
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#39;");
+}
+
 // Export for Node.js environment if module is defined
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
@@ -207,4 +189,3 @@ if (typeof module !== "undefined" && module.exports) {
         handleLayoutColumns
     };
 }
-

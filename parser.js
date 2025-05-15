@@ -76,6 +76,16 @@ function handleHeading(data) {
  * @param {object} data The data object for the paragraph block.
  * @returns {string} The HTML string for the paragraph.
  */
+/**
+ * Handles paragraph blocks.
+ * @param {object} data The data object for the paragraph block.
+ * @returns {string} The HTML string for the paragraph.
+ * If the paragraph block has a richText array, this function will process it and
+ * return the HTML string. If the paragraph block has a text string, this function
+ * will convert newline characters to <br> tags and return the HTML string.
+ * If the paragraph block has neither a richText array nor a text string, this
+ * function will return an empty string.
+ */
 function handleParagraph(data) {
     if (!data || (typeof data.text !== 'string' && !Array.isArray(data.richText))) {
         console.warn('Paragraph: Missing text or richText array.');
@@ -94,6 +104,23 @@ function handleParagraph(data) {
 
             let textContent = escapeHtml(item.content);
 
+            // Apply custom color/background color tags, assuming '/' in closing tag becomes '&#x2F;'
+            textContent = textContent.replace(
+                /\[color:([^,\]]+),bgColor:([^,\]]+)\]([\s\S]*?)\[&#x2F;color\]/g,
+                (match, color, bgColor, content) => `<span style="color: ${escapeHtml(color.trim())}; background-color: ${escapeHtml(bgColor.trim())};">${content}</span>`
+            );
+            textContent = textContent.replace(
+                /\[color:([^,\]]+)\]([\s\S]*?)\[&#x2F;color\]/g,
+                (match, color, content) => `<span style="color: ${escapeHtml(color.trim())};">${content}</span>`
+            );
+            textContent = textContent.replace(
+                /\[bgColor:([^,\]]+)\]([\s\S]*?)\[&#x2F;bgColor\]/g,
+                (match, bgColor, content) => `<span style="background-color: ${escapeHtml(bgColor.trim())};">${content}</span>`
+            );
+
+            // Convert newline characters to <br> tags
+            textContent = textContent.replace(/\n/g, '<br>\n');
+
             if (Array.isArray(item.marks)) {
                 item.marks.forEach(mark => {
                     if (mark === 'bold') {
@@ -110,22 +137,78 @@ function handleParagraph(data) {
             }
 
             if (item.type === 'link' && item.href) {
-                // For links, ensure href is also somewhat sanitized or validated if necessary,
-                // though escapeHtml on content already helps.
-                // A more robust solution might check for valid URL protocols (http, https, mailto)
-                // to prevent javascript: pseudo-protocol XSS if URLs aren't strictly controlled.
                 const safeHref = escapeHtml(item.href); // Escape for attribute context
                 textContent = `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${textContent}</a>`;
             }
             paragraphContent += textContent;
         });
     } else if (typeof data.text === 'string') {
-        // Fallback to simple text with Markdown-like bold/italic
-        let text = escapeHtml(data.text);
-        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); // Bold
-        text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');       // Italic
-        // Add more simple markdown conversions if desired (e.g., `__underline__`, `~strikethrough~`)
+        // Fallback to simple text
+        let text = data.text; // Store original text before escaping for logging
+        console.log("[parser.js] handleParagraph - Original data.text:", text);
+
+        text = escapeHtml(data.text); // escapeHtml is called on the original data.text
+        console.log("[parser.js] handleParagraph - After escapeHtml:", text);
+
+        // Apply custom color/background color tags, assuming '/' in closing tag becomes '&#x2F;'
+        text = text.replace(
+            /\[color:([^,\]]+),bgColor:([^,\]]+)\]([\s\S]*?)\[&#x2F;color\]/g,
+            (match, color, bgColor, content) => {
+                const replacement = `<span style="color: ${escapeHtml(color.trim())}; background-color: ${escapeHtml(bgColor.trim())};">${content}</span>`;
+                console.log(`[parser.js] handleParagraph - Replacing color/bgColor tag: '${match}' with '${replacement}'`);
+                return replacement;
+            }
+        );
+        console.log("[parser.js] handleParagraph - After dual color/bgColor replace:", text);
+
+        text = text.replace(
+            /\[color:([^,\]]+)\]([\s\S]*?)\[&#x2F;color\]/g,
+            (match, color, content) => {
+                const replacement = `<span style="color: ${escapeHtml(color.trim())};">${content}</span>`;
+                console.log(`[parser.js] handleParagraph - Replacing color tag: '${match}' with '${replacement}'`);
+                return replacement;
+            }
+        );
+        console.log("[parser.js] handleParagraph - After color replace:", text);
+
+        text = text.replace(
+            /\[bgColor:([^,\]]+)\]([\s\S]*?)\[&#x2F;bgColor\]/g,
+            (match, bgColor, content) => {
+                const replacement = `<span style="background-color: ${escapeHtml(bgColor.trim())};">${content}</span>`;
+                console.log(`[parser.js] handleParagraph - Replacing bgColor tag: '${match}' with '${replacement}'`);
+                return replacement;
+            }
+        );
+        console.log("[parser.js] handleParagraph - After bgColor replace:", text);
+
+        // Convert newline characters to <br> tags
+        const oldTextForNewlineCheck = text;
+        text = text.replace(/\n/g, '<br>\n');
+        if (text !== oldTextForNewlineCheck) {
+            console.log("[parser.js] handleParagraph - After newline to <br> conversion:", text);
+        }
+        
+        // Markdown-like conversions (order matters for correctness)
+        const oldTextForBold4Check = text;
+        text = text.replace(/\*{4}([^*]+)\*{4}/g, '<strong>$1</strong>'); // ****text**** (bold)
+        if (text !== oldTextForBold4Check) {
+             console.log("[parser.js] handleParagraph - After ****bold**** conversion:", text);
+        }
+
+        const oldTextForBold2Check = text;
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); // **text** (Bold)
+        if (text !== oldTextForBold2Check) {
+            console.log("[parser.js] handleParagraph - After **bold** conversion:", text);
+        }
+
+        const oldTextForItalicCheck = text;
+        text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');       // *text* (Italic)
+        if (text !== oldTextForItalicCheck) {
+            console.log("[parser.js] handleParagraph - After *italic* conversion:", text);
+        }
+        
         paragraphContent = text;
+        console.log("[parser.js] handleParagraph - Final paragraphContent for data.text:", paragraphContent);
     } else {
         console.warn('Paragraph: No valid text or richText found.');
         return '';
